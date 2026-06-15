@@ -35,40 +35,133 @@ algoritma **UUniFast**. Tugas akan muncul di tab *📋 Task Set*.
 Klik **🔍 Analyze** untuk menjalankan **Algoritma 1** (fixed-point iteration)
 yang menghitung estimasi WCRT konservatif untuk setiap tugas.
 
-Hasil ditampilkan di tab *📈 Analysis*:
-- **System Schedulable** — Apakah semua tugas memenuhi deadline?
-- **WCRT (ms)** — Estimated worst-case response time
-- **Iterations** — Jumlah iterasi hingga konvergen
+**Parameter Analisis:**
+
+| Parameter | Default | Penjelasan |
+|-----------|---------|------------|
+| `max_iterations` | 1000 | Batas maksimum iterasi fixed-point agar tidak infinite loop |
+| `tolerance` | 1e-9 | Konvergensi: iterasi berhenti jika \|Rᵢⁿ⁺¹ - Rᵢⁿ\| < tolerance |
+| **Algoritma** | — | Persamaan 33: Lᵢ = Cᵢ + Σ⌈Lᵢ/Tⱼ⌉·Cⱼ (busy period) |
+
+**Output di tab *📈 Analysis*:**
+
+| Metrik | Penjelasan |
+|--------|------------|
+| **System Schedulable** | ✅ Ya / ❌ Tidak — semua tugas memenuhi deadline? |
+| **Tasks Schedulable** | Jumlah tugas schedulable / total tugas |
+| **WCRT (ms)** | Estimated worst-case response time untuk setiap tugas |
+| **Iterations** | Jumlah iterasi fixed-point hingga konvergen |
+| **Time (us)** | Waktu komputasi analisis per tugas (mikrodetik) |
+
+**Cara baca:** Jika WCRT estimasi ≤ deadline → tugas **schedulable ✅**.
+Jika > deadline → perlu optimasi nice value.
+
+---
 
 ### 3. Simulasi CFS
 
 Klik **⚙️ Simulate** untuk menjalankan discrete-event simulator CFS.
-Simulator ini meniru perilaku penjadwal CFS Linux:
-- Pelacakan *vruntime* (Definisi 1 & 2)
-- Alokasi *timeslice* dinamis (Definisi 3 & 4)
-- Penyesuaian *wake-up* (Definisi 5)
-- Tick jiffy periodik
+Simulator ini meniru perilaku penjadwal CFS Linux secara *cycle-accurate*:
 
-Hasil ditampilkan di tab *🎯 Simulation*.
+**Mekanisme Simulasi:**
+
+| Definisi | Nama | Rumusan |
+|----------|------|---------|
+| Definisi 1 | **Update Min vruntime** | V_min = min(V_i dari semua task runnable) |
+| Definisi 2 | **Update Curr** | V_i += Δ · w₀ / wᵢ |
+| Definisi 3 & 4 | **Timeslice** | σ̃ = max((wᵢ / W)·L_adj, G) dibulatkan ke jiffy |
+| Definisi 5 | **Place Entity** | V_i = max(V_i, V_min) saat wake-up |
+
+**Parameter Simulasi:**
+
+| Parameter | Default | Penjelasan |
+|-----------|---------|------------|
+| `hyperperiod_factor` | 2.0 | Durasi simulasi = hyperperiod × factor (ms) |
+| `num_runs` | 5 | Jumlah run dengan random offset berbeda |
+| `max_events` | 50000 | Batas maks event agar tidak infinite loop |
+| **Offset** | random | Setiap run menggunakan offset fase acak 0–30% period |
+
+**Output di tab *🎯 Simulation*:**
+
+| Metrik | Penjelasan |
+|--------|------------|
+| **Measured WCRT (ms)** | Response time terbesar yang terukur dari semua run |
+| **Deadline (ms)** | Batas waktu tugas |
+| **Status** | ✅ OK jika ≤ deadline, ❌ MISS jika terlambat |
+
+Simulasi menggunakan *random offset* setiap run untuk mendapatkan skenario
+terburuk. Semakin banyak `num_runs`, semakin akurat pengukuran WCRT.
+
+---
 
 ### 4. Perbandingan
 
-Klik **📊 Compare Results** untuk melihat perbandingan antara:
-- **Measured WCRT** — Hasil simulasi aktual
-- **Estimated WCRT** — Hasil analisis
-- **Deadline** — Batas waktu setiap tugas
-- **Overestimation** — Seberapa konservatif estimasi
+Klik **📊 Compare Results** untuk melihat perbandingan antara hasil
+analisis dan simulasi secara side-by-side.
 
-Jika estimasi ≤ deadline → tugas **schedulable ✅**
+**Metrik Perbandingan:**
+
+| Metrik | Sumber | Penjelasan |
+|--------|--------|------------|
+| **Measured WCRT (ms)** | Simulator | Response time aktual dari discrete-event simulation |
+| **Estimated WCRT (ms)** | Analisis | Response time estimasi dari Algoritma 1 |
+| **Deadline (ms)** | Task set | Batas waktu absolut yang harus dipenuhi |
+| **Overestimation** | (E-M)/M | Rasio konservatisme estimasi terhadap aktual |
+| **Meets?** | E ≤ D | ✅ YES jika estimasi ≤ deadline, ❌ NO jika tidak |
+
+**Interpretasi:**
+
+| Skenario | Arti |
+|----------|------|
+| Estimated ≈ Measured | Analisis akurat, tidak berlebihan |
+| Estimated > Measured | Analisis konservatif (safe — lebih baik) |
+| Estimated > Deadline | Tugas tidak schedulable — perlu optimasi |
+| Overestimation tinggi | Analisis terlalu konservatif (masih safe) |
+
+Jika estimasi ≤ deadline → tugas **schedulable ✅**.
+Tools juga menampilkan **bar chart** perbandingan visual.
+
+---
 
 ### 5. Optimasi Nice Value
 
-Klik **🧬 Optimize Nice Values** untuk menjalankan:
-- **Algorithm 2** — Deadline-Aware Heuristic
-- **Algorithm 3** — Genetic Algorithm
+Klik **🧬 Optimize Nice Values** untuk mencari assignment *nice value*
+optimal agar semua tugas schedulable.
 
-Kedua algoritma mencari assignment *nice value* optimal agar semua tugas
-schedulable.
+**Algoritma 2 — Deadline-Aware Heuristic:**
+
+| Parameter | Default | Penjelasan |
+|-----------|---------|------------|
+| `lambda_min` | 0.0 | Nilai awal lambda (λ) yang dicoba |
+| `lambda_max` | 40.0 | Nilai maksimum lambda |
+| `lambda_gap` | 0.1 | Step kenaikan lambda setiap iterasi |
+| **Formula** | — | nice_i = round(-λ · log₂(D_max / D_i)) |
+
+Prinsip: Tugas dengan deadline lebih pendek mendapat nice lebih rendah
+(prioritas lebih tinggi). Lambda mengontrol seberapa agresif perbedaan
+nice value antar tugas.
+
+**Algoritma 3 — Genetic Algorithm (GA):**
+
+| Parameter | Default | Penjelasan |
+|-----------|---------|------------|
+| `population_size` | 100 | Jumlah kromosom dalam satu generasi |
+| `mutation_rate` | 0.05 (5%) | Probabilitas mutasi setiap gen |
+| `max_generations` | 200 | Generasi maksimum sebelum berhenti |
+| `timeout_seconds` | 5.0 | Waktu maksimum eksekusi (safety) |
+| `tournament_size` | 3 | Jumlah kandidat seleksi tiap turnamen |
+| **Fitness** | — | Jumlah tugas schedulable (max = n) |
+
+**Output:**
+
+| Metrik | Penjelasan |
+|--------|------------|
+| **Schedulable?** | ✅ Ya / ❌ Tidak — apakah semua tugas schedulable |
+| **Nice Values** | Tabel assignment nice value per tugas |
+| **Method** | Heuristic / Genetic Algorithm |
+
+GA mencari kombinasi 40ⁿ kemungkinan nice value (n = jumlah tugas)
+menggunakan evolusi: seleksi → crossover → mutasi.
 
 ### 6. Export CSV
 
