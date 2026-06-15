@@ -1,0 +1,35 @@
+[server]
+# Batas maks upload file (MB)
+maxUploadSize = 10
+
+# Batas maks message size (MB)
+maxMessageSize = 200
+
+# Proteksi XSRF/CSRF
+enableXsrfProtection = true
+
+# Keep alive untuk koneksi lama
+enableCORS = false
+
+[browser]
+# Nonaktifkan telemetry
+gatherUsageStats = false
+
+# Nama tab browser
+serverAddress = "localhost"
+
+[theme]
+# Tema warna
+base = "light"
+primaryColor = "#1E88E5"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#212121"
+
+[logger]
+# Level log production
+level = "warning"
+
+[runner]
+# Cache function results
+magicEnabled = true

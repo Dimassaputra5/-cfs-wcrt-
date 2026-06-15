@@ -1,0 +1,7 @@
+services:
+  cfs-wcrt:
+    build: .
+    container_name: cfs-wcrt
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
