@@ -11,7 +11,7 @@ from typing import Any
 import streamlit as st
 
 from cfs_wcrt.analysis import WCRTAnalyzer
-from cfs_wcrt.core import CFSConfig
+from cfs_wcrt.core import CFSConfig, TaskParams
 from cfs_wcrt.generation import TaskGenConfig, generate_task_set
 from cfs_wcrt.optimization import DeadlineAwareHeuristic, GeneticNiceAssignment
 from cfs_wcrt.simulation import CFSSimulator
@@ -360,6 +360,21 @@ def _workflow_status() -> None:
             st.markdown(f":gray[{num}] {label}")
 
 
+def _load_example_tasks() -> None:
+    """Load educational 2-task example into session state."""
+    tasks = [
+        TaskParams.from_nice(task_id=0, wcet=3.0, nice=0, period=30.0, deadline=30.0),
+        TaskParams.from_nice(task_id=1, wcet=6.0, nice=5, period=60.0, deadline=60.0),
+    ]
+    st.session_state.tasks = tasks
+    st.session_state.analysis_done = False
+    st.session_state.simulation_done = False
+    st.session_state.measured = {}
+    st.session_state.analysis_result = None
+    st.session_state.task_df = _tasks_to_df(tasks)
+    st.success("Contoh 2 tugas berhasil dimuat! Buka tab **Tugas** untuk melihat.")
+
+
 # ── Main UI ──────────────────────────────────────────────────────────────
 
 _init_session()
@@ -434,24 +449,103 @@ with st.sidebar:
 
 def _show_panduan() -> None:
     """Tampilkan panduan penggunaan dalam Bahasa Indonesia."""
+    import pandas as pd  # type: ignore[import-untyped]  # noqa: TCH002
+
     st.markdown("## Panduan Penggunaan Alat Analisis CFS WCRT")
     st.markdown("---")
 
     with st.expander("**Apa Itu CFS WCRT Analysis?**", expanded=True):
-        st.markdown("""
-        Tools ini menganalisis **Worst-Case Response Time (WCRT)** untuk penjadwalan
-        **Completely Fair Scheduler (CFS)** di kernel Linux. Berdasarkan penelitian:
 
-        > Yoon et al., *"Worst case response time analysis for completely fair
-        > scheduling in Linux systems"*, Real-Time Systems, 2025.
-
-        CFS adalah penjadwal default Linux yang membagi waktu CPU secara proporsional
-        berdasarkan *nice value* setiap tugas. Tools ini menyediakan:
-
-        - **Analisis WCRT** — Estimasi konservatif response time terburuk
-        - **Simulasi CFS** — Pengukuran aktual via discrete-event simulator
-        - **Optimasi Nice Value** — Algoritma penentuan prioritas tugas
+        # ── Intinya (summary, always visible) ──
+        st.info("""
+        **Intinya:** CFS membagi waktu CPU secara proporsional berdasarkan *nice value*
+        setiap tugas. **WCRT Analysis** menentukan apakah semua tugas dapat memenuhi
+        *deadline*-nya meskipun berjalan bersamaan.
         """)
+
+        st.markdown("---")
+
+        # ── Contoh Sederhana (FIRST — show, don't tell) ──
+        st.markdown("### Contoh Sederhana: 2 Tugas")
+        st.markdown("""
+        Misalkan kita memiliki 2 tugas dengan parameter berikut:
+        """)
+
+        df_example = pd.DataFrame([
+            {"Tugas": "A", "WCET": "3 ms", "Periode": "30 ms",
+             "Nice": 0, "Weight": 1024, "Bagian CPU": "75.3%"},
+            {"Tugas": "B", "WCET": "6 ms", "Periode": "60 ms",
+             "Nice": 5, "Weight": 335, "Bagian CPU": "24.7%"},
+        ])
+        st.dataframe(df_example, use_container_width=True, hide_index=True)
+
+        st.markdown("**Perhitungan Bobot:**")
+        st.code("weight(nice) = 1024 / (1.25)^nice", language=None)
+        st.markdown("""
+        - Tugas A (nice=0): wA = **1024**
+        - Tugas B (nice=5): wB = 1024 / 1.25^5 = **335**
+        - Total weight = 1024 + 335 = **1359**
+        """)
+
+        st.markdown("**Distribusi CPU dalam 100 ms:**")
+        col_pa, col_pb = st.columns(2)
+        with col_pa:
+            st.markdown("Tugas A: 75.3%")
+            st.progress(0.753)
+        with col_pb:
+            st.markdown("Tugas B: 24.7%")
+            st.progress(0.247)
+
+        st.markdown("**Hasil WCRT:**")
+        col_r1, col_r2, col_r3 = st.columns(3)
+        with col_r1:
+            st.metric("Tugas A: WCRT", "4.0 ms", delta="Deadline: 30 ms")
+            st.markdown(":green[**Schedulable**]")
+        with col_r2:
+            st.metric("Tugas B: WCRT", "24.3 ms", delta="Deadline: 60 ms")
+            st.markdown(":green[**Schedulable**]")
+        with col_r3:
+            st.metric("Utilisasi Total", "20%")
+
+        st.markdown("---")
+
+        # ── Latar Belakang & Masalah (merged, short) ──
+        st.markdown("### Latar Belakang & Masalah")
+        st.markdown("""
+        **Completely Fair Scheduler (CFS)** adalah penjadwal default Linux yang membagi
+        waktu CPU secara proporsional — setiap tugas mendapat jatah CPU sebanding dengan
+        *weight*-nya (ditentukan oleh *nice value*). Tugas dengan nice lebih rendah
+        (prioritas lebih tinggi) mendapat jatah CPU lebih besar.
+
+        **Masalahnya,** CFS dirancang untuk *throughput* dan *fairness*, bukan untuk
+        jaminan *real-time*. Tanpa analisis WCRT, kita tidak tahu apakah tugas
+        *real-time* (seperti sensor drone atau kontrol medis) akan selalu memenuhi
+        deadline-nya saat semua tugas aktif bersamaan.
+
+        **Tools ini menjawab:** "Dengan parameter tugas yang diketahui (WCET, period,
+        nice value), dapatkah kita menjamin semua deadline terpenuhi di bawah CFS?"
+        """)
+
+        st.markdown("---")
+
+        # ── Langkah Selanjutnya (CTA) ──
+        st.markdown("### Langkah Selanjutnya")
+        st.success("""
+        **Siap mencoba?** Klik tombol di bawah untuk memuat contoh 2 tugas ke dalam
+        tools, lalu jalankan analisis dan simulasi.
+        """)
+
+        col_b1, col_b2 = st.columns([1, 2])
+        with col_b1:
+            if st.button("Muat Contoh ke Tugas", use_container_width=True, type="primary"):
+                _load_example_tasks()
+        with col_b2:
+            st.markdown("""
+            1. Klik **Muat Contoh** — tugas siap di tab *Tugas*
+            2. Di sidebar — klik **Analisis**
+            3. Klik **Simulasi**
+            4. Buka tab *Perbandingan* untuk melihat hasil
+            """)
 
     with st.expander("**1. Generate Task Set**"):
         st.markdown("""
