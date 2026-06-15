@@ -27,7 +27,7 @@ DEF_UTIL = 0.5
 
 st.set_page_config(
     page_title="CFS WCRT Analysis",
-    page_icon="⏱️",
+    page_icon=None,
     layout="wide",
 )
 
@@ -128,7 +128,7 @@ def _show_analysis_results() -> None:
         return
 
     col1, col2 = st.columns(2)
-    col1.metric("System Schedulable", "✅ Yes" if result.system_schedulable else "❌ No")
+    col1.metric("System Schedulable", "Yes" if result.system_schedulable else "No")
     num_sched = sum(1 for r in result.results if r.schedulable)
     col2.metric("Tasks Schedulable", f"{num_sched}/{len(result.results)}")
 
@@ -137,7 +137,7 @@ def _show_analysis_results() -> None:
         data.append({
             "Task": r.task_id,
             "WCRT (ms)": f"{r.estimated_wcrt:.2f}",
-            "Schedulable": "✅" if r.schedulable else "❌",
+            "Schedulable": "Yes" if r.schedulable else "No",
             "Iterations": r.iterations,
             "Time (us)": f"{r.analysis_time_us:.1f}",
         })
@@ -159,7 +159,7 @@ def _show_simulation_results() -> None:
             "Task": t.task_id,
             "Measured WCRT (ms)": f"{wcrt:.2f}",
             "Deadline (ms)": f"{t.deadline:.1f}",
-            "Status": "✅ OK" if ok else "❌ MISS",
+            "Status": "OK" if ok else "MISS",
         })
     st.dataframe(data, use_container_width=True, hide_index=True)
 
@@ -288,7 +288,7 @@ def _hyperperiod(periods: list[float]) -> int:
 
 _init_session()
 
-st.title("⏱️ CFS WCRT Analysis Tool")
+st.title("CFS WCRT Analysis Tool")
 st.markdown(
     "Worst-Case Response Time Analysis for Completely Fair Scheduling "
     "in Linux Systems — based on Yoon et al. (2025)"
@@ -303,7 +303,7 @@ with st.sidebar:
     utilization = st.slider("Utilization", MIN_UTIL, MAX_UTIL, DEF_UTIL, 0.05)
     seed = st.number_input("Random Seed", 0, 999999, 42)
 
-    if st.button("🎲 Generate Task Set", use_container_width=True, type="primary"):
+    if st.button("Generate Task Set", use_container_width=True, type="primary"):
         _generate_tasks(int(num_tasks), float(utilization), int(seed))
 
     st.divider()
@@ -311,22 +311,22 @@ with st.sidebar:
 
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("🔍 Analyze", use_container_width=True):
+        if st.button("Analyze", use_container_width=True):
             _run_analysis()
     with col_b:
-        if st.button("⚙️ Simulate", use_container_width=True):
+        if st.button("Simulate", use_container_width=True):
             _run_simulation()
 
-    if st.button("📊 Compare Results", use_container_width=True):
+    if st.button("Compare Results", use_container_width=True):
         _show_comparison()
 
-    if st.button("🧬 Optimize Nice Values", use_container_width=True):
+    if st.button("Optimize Nice Values", use_container_width=True):
         _run_optimize()
 
     csv_bytes = _csv_download()
     if csv_bytes:
         st.download_button(
-            "⬇️ Export CSV",
+            "Export CSV",
             data=csv_bytes,
             file_name="cfs_wcrt_results.csv",
             mime="text/csv",
@@ -338,11 +338,11 @@ with st.sidebar:
 def _show_panduan() -> None:
     """Tampilkan panduan penggunaan dalam Bahasa Indonesia."""
     st.markdown("""
-    ## 📖 Panduan Penggunaan CFS WCRT Analysis Tool
+    ## Panduan Penggunaan CFS WCRT Analysis Tool
 
     ---
 
-    ### 🎯 Apa Itu CFS WCRT Analysis?
+    ### Apa Itu CFS WCRT Analysis?
 
     Tools ini menganalisis **Worst-Case Response Time (WCRT)** untuk penjadwalan
     **Completely Fair Scheduler (CFS)** di kernel Linux. Berdasarkan penelitian:
@@ -359,7 +359,7 @@ def _show_panduan() -> None:
 
     ---
 
-    ### 🚀 Cara Penggunaan
+    ### Cara Penggunaan
 
     #### 1. Generate Task Set
 
@@ -369,12 +369,12 @@ def _show_panduan() -> None:
     | **Utilization** | Total utilisasi sistem (0.05–0.95) |
     | **Random Seed** | Nilai awal untuk reproduksibilitas |
 
-    Klik **🎲 Generate Task Set** untuk membuat tugas sintetis menggunakan
-    algoritma **UUniFast**. Tugas akan muncul di tab *📋 Task Set*.
+    Klik **Generate Task Set** untuk membuat tugas sintetis menggunakan
+    algoritma **UUniFast**. Tugas akan muncul di tab *Task Set*.
 
     #### 2. Analisis WCRT
 
-    Klik **🔍 Analyze** untuk menjalankan **Algoritma 1** (fixed-point iteration)
+    Klik **Analyze** untuk menjalankan **Algoritma 1** (fixed-point iteration)
     yang menghitung estimasi WCRT konservatif untuk setiap tugas.
 
     **Parameter Analisis:**
@@ -385,24 +385,24 @@ def _show_panduan() -> None:
     | `tolerance` | 1e-9 | Konvergensi: iterasi berhenti jika |Rᵢⁿ⁺¹ - Rᵢⁿ| < tolerance |
     | **Algoritma** | — | Persamaan 33: Lᵢ = Cᵢ + Σ⌈Lᵢ/Tⱼ⌉·Cⱼ (busy period) |
 
-    **Output di tab *📈 Analysis*:**
+    **Output di tab *Analysis*:**
 
     | Metrik | Penjelasan |
     |--------|------------|
-    | **System Schedulable** | ✅ Ya / ❌ Tidak — semua tugas memenuhi deadline? |
+    | **System Schedulable** | Ya / Tidak — semua tugas memenuhi deadline? |
     | **Tasks Schedulable** | Jumlah tugas schedulable / total tugas |
     | **WCRT (ms)** | Estimated worst-case response time untuk setiap tugas |
     | **Iterations** | Jumlah iterasi fixed-point hingga konvergen |
     | **Time (us)** | Waktu komputasi analisis per tugas (mikrodetik) |
 
-    **Cara baca:** Jika WCRT estimasi ≤ deadline → tugas **schedulable ✅**.
+    **Cara baca:** Jika WCRT estimasi ≤ deadline → tugas **schedulable**.
     Jika > deadline → perlu optimasi nice value.
 
     ---
 
     #### 3. Simulasi CFS
 
-    Klik **⚙️ Simulate** untuk menjalankan discrete-event simulator CFS.
+    Klik **Simulate** untuk menjalankan discrete-event simulator CFS.
     Simulator ini meniru perilaku penjadwal CFS Linux secara *cycle-accurate*:
 
     **Mekanisme Simulasi:**
@@ -423,13 +423,13 @@ def _show_panduan() -> None:
     | `max_events` | 50000 | Batas maks event agar tidak infinite loop |
     | **Offset** | random | Setiap run menggunakan offset fase acak 0–30% period |
 
-    **Output di tab *🎯 Simulation*:**
+    **Output di tab *Simulation*:**
 
     | Metrik | Penjelasan |
     |--------|------------|
     | **Measured WCRT (ms)** | Response time terbesar yang terukur dari semua run |
     | **Deadline (ms)** | Batas waktu tugas |
-    | **Status** | ✅ OK jika ≤ deadline, ❌ MISS jika terlambat |
+    | **Status** | OK jika ≤ deadline, MISS jika terlambat |
 
     Simulasi menggunakan *random offset* setiap run untuk mendapatkan skenario
     terburuk. Semakin banyak `num_runs`, semakin akurat pengukuran WCRT.
@@ -438,7 +438,7 @@ def _show_panduan() -> None:
 
     #### 4. Perbandingan
 
-    Klik **📊 Compare Results** untuk melihat perbandingan antara hasil
+    Klik **Compare Results** untuk melihat perbandingan antara hasil
     analisis dan simulasi secara side-by-side.
 
     **Metrik Perbandingan:**
@@ -449,7 +449,7 @@ def _show_panduan() -> None:
     | **Estimated WCRT (ms)** | Analisis | Response time estimasi dari Algoritma 1 |
     | **Deadline (ms)** | Task set | Batas waktu absolut yang harus dipenuhi |
     | **Overestimation** | (E-M)/M | Rasio konservatisme estimasi terhadap aktual |
-    | **Meets?** | E ≤ D | ✅ YES jika estimasi ≤ deadline, ❌ NO jika tidak |
+    | **Meets?** | E ≤ D | YES jika estimasi ≤ deadline, NO jika tidak |
 
     **Interpretasi:**
 
@@ -460,14 +460,14 @@ def _show_panduan() -> None:
     | Estimated > Deadline | Tugas tidak schedulable — perlu optimasi |
     | Overestimation tinggi | Analisis terlalu konservatif (masih safe) |
 
-    Jika estimasi ≤ deadline → tugas **schedulable ✅**.
+    Jika estimasi ≤ deadline → tugas **schedulable**.
     Tools juga menampilkan **bar chart** perbandingan visual.
 
     ---
 
     #### 5. Optimasi Nice Value
 
-    Klik **🧬 Optimize Nice Values** untuk mencari assignment *nice value*
+    Klik **Optimize Nice Values** untuk mencari assignment *nice value*
     optimal agar semua tugas schedulable.
 
     **Algoritma 2 — Deadline-Aware Heuristic:**
@@ -498,7 +498,7 @@ def _show_panduan() -> None:
 
     | Metrik | Penjelasan |
     |--------|------------|
-    | **Schedulable?** | ✅ Ya / ❌ Tidak — apakah semua tugas schedulable |
+    | **Schedulable?** | Ya / Tidak — apakah semua tugas schedulable |
     | **Nice Values** | Tabel assignment nice value per tugas |
     | **Method** | Heuristic / Genetic Algorithm |
 
@@ -507,12 +507,12 @@ def _show_panduan() -> None:
 
     #### 6. Export CSV
 
-    Klik **⬇️ Export CSV** untuk mendownload hasil analisis dan simulasi
+    Klik **Export CSV** untuk mendownload hasil analisis dan simulasi
     dalam format CSV.
 
     ---
 
-    ### 📋 Penjelasan Parameter
+    ### Penjelasan Parameter
 
     | Parameter | Default | Rentang | Penjelasan |
     |-----------|---------|---------|------------|
@@ -527,7 +527,7 @@ def _show_panduan() -> None:
 
     ---
 
-    ### 💻 Menjalankan dari CLI
+    ### Menjalankan dari CLI
 
     Tools ini juga bisa dijalankan dari command line:
 
@@ -544,7 +544,7 @@ def _show_panduan() -> None:
 
     ---
 
-    ### 📚 Referensi
+    ### Referensi
 
     1. Yoon, P., Kim, J., & Lee, C. (2025). Worst case response time analysis
        for completely fair scheduling in Linux systems. *Real-Time Systems*.
@@ -554,7 +554,7 @@ def _show_panduan() -> None:
 
     ---
 
-    ### 🏗️ Arsitektur Tools
+    ### Arsitektur Tools
 
     ```
     src/cfs_wcrt/
@@ -571,7 +571,7 @@ def _show_panduan() -> None:
 # ── Main Panel ───────────────────────────────────────────────────────────
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📋 Task Set", "📈 Analysis", "🎯 Simulation", "📊 Comparison", "📖 Panduan",
+    "Task Set", "Analysis", "Simulation", "Comparison", "Panduan",
 ])
 
 with tab1:
