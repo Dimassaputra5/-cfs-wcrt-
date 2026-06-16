@@ -286,7 +286,7 @@ def _show_analysis_results() -> None:
             "Schedulable": "Ya" if r.schedulable else "Tidak",
         })
     df = pd.DataFrame(data)
-    styled = df.style.applymap(_color_status, subset=["Schedulable"])
+    styled = df.style.map(_color_status, subset=["Schedulable"])
     st.dataframe(
         styled,
         column_config={
@@ -356,7 +356,7 @@ def _show_simulation_results() -> None:
             "Schedulable": status,
         })
     df = pd.DataFrame(data)
-    styled = df.style.applymap(_color_status, subset=["Schedulable"])
+    styled = df.style.map(_color_status, subset=["Schedulable"])
     st.dataframe(
         styled,
         column_config={
@@ -420,7 +420,7 @@ def _show_comparison() -> None:
             "Schedulable": meets,
         })
     df = pd.DataFrame(rows)
-    styled = df.style.applymap(_color_status, subset=["Schedulable"])
+    styled = df.style.map(_color_status, subset=["Schedulable"])
 
     def _color_over(val: float) -> str:
         if val < -0.05:
@@ -429,7 +429,7 @@ def _show_comparison() -> None:
             return "color: #E65100"  # orange = very conservative
         return ""
 
-    styled = styled.applymap(_color_over, subset=["Overestimasi"])
+    styled = styled.map(_color_over, subset=["Overestimasi"])
     st.dataframe(
         styled,
         column_config={
